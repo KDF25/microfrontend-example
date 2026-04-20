@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "monolith",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "monolith", "dev"],
+      "port": 3000
+    }
+  ]
+}

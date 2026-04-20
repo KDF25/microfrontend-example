@@ -1,4 +1,5 @@
 const path = require("path");
+const webpack = require("webpack");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 
@@ -30,6 +31,24 @@ module.exports = (env, argv) => {
       new HtmlWebpackPlugin({ template: "./public/index.html" }),
       new CopyWebpackPlugin({
         patterns: [{ from: "public/img", to: "img", noErrorOnMissing: true }],
+      }),
+      // Webpack 5 doesn't polyfill `process` in the browser. Inline the
+      // env vars we actually read at runtime. Unset vars compile to the
+      // literal `undefined` so `readBool`'s fallback path kicks in.
+      new webpack.DefinePlugin({
+        "process.env.APP_VERSION": JSON.stringify(process.env.APP_VERSION ?? "dev"),
+        "process.env.FEATURE_NEW_CART":
+          process.env.FEATURE_NEW_CART !== undefined
+            ? JSON.stringify(process.env.FEATURE_NEW_CART)
+            : "undefined",
+        "process.env.FEATURE_PROMO_BANNER":
+          process.env.FEATURE_PROMO_BANNER !== undefined
+            ? JSON.stringify(process.env.FEATURE_PROMO_BANNER)
+            : "undefined",
+        "process.env.FEATURE_ORDERS_EXPORT":
+          process.env.FEATURE_ORDERS_EXPORT !== undefined
+            ? JSON.stringify(process.env.FEATURE_ORDERS_EXPORT)
+            : "undefined",
       }),
     ],
     devServer: {

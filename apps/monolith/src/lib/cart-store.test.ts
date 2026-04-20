@@ -16,7 +16,7 @@ describe("cart store", () => {
   it("increments quantity when adding an existing product", () => {
     useCart.getState().add("p-001", 1);
     useCart.getState().add("p-001", 3);
-    expect(useCart.getState().lines[0].quantity).toBe(4);
+    expect(useCart.getState().lines[0]?.quantity).toBe(4);
   });
 
   it("removes a line", () => {
@@ -25,13 +25,13 @@ describe("cart store", () => {
     useCart.getState().remove("p-001");
     const lines = useCart.getState().lines;
     expect(lines).toHaveLength(1);
-    expect(lines[0].productId).toBe("p-002");
+    expect(lines[0]?.productId).toBe("p-002");
   });
 
   it("sets quantity directly", () => {
     useCart.getState().add("p-001");
     useCart.getState().setQuantity("p-001", 7);
-    expect(useCart.getState().lines[0].quantity).toBe(7);
+    expect(useCart.getState().lines[0]?.quantity).toBe(7);
   });
 
   it("totals items across lines", () => {

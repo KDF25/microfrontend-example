@@ -46,7 +46,6 @@ mf-infra/
 ├── infra/              ← Terraform: S3 + CloudFront per microfrontend, CI role, SSM
 ├── .github/workflows/  ← one pipeline per app + a reusable build+sync job
 ├── STUDENT_TASK.md     ← the assignment
-├── MENTOR_NOTES.md     ← expected solution, red flags, defense questions
 └── architecture.md     ← mermaid diagrams: current vs target
 ```
 

@@ -2,8 +2,7 @@ name: host
 
 # The host bakes remote URLs (CATALOG_URL, ACCOUNT_URL) into its bundle.
 # If you rotate a remote's domain, you must redeploy the host too — this is
-# the price of static remote URLs. MENTOR_NOTES.md covers the dynamic-remote
-# upgrade path.
+# the price of static remote URLs. A runtime manifest is the upgrade path.
 on:
   push:
     branches: [main]

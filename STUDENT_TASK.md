@@ -116,8 +116,8 @@ You must:
 9. **Service discovery.** Answer in `architecture.md`: how does the host
    learn the URL of `catalog`? Today it's baked in at build time via
    `CATALOG_URL`. What changes if you want to rotate the catalog domain
-   without redeploying the host? (See MENTOR_NOTES.md for the dynamic-
-   remote approach.)
+   without redeploying the host? Sketch the dynamic-remote approach
+   (runtime manifest fetched by the host at startup).
 
 ---
 

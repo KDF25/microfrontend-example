@@ -9,7 +9,7 @@ import { formatPrice } from "@/lib/format";
 //   - it shouldn't gain a new deploy surface just to render a summary
 //
 // A defensible alternative: extract Checkout as a third remote if the
-// checkout team is staffed separately. Discuss trade-offs in MENTOR_NOTES.
+// checkout team is staffed separately.
 export function Checkout() {
   const lines = useCart((s) => s.lines);
   const setQuantity = useCart((s) => s.setQuantity);

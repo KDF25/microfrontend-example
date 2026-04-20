@@ -13,7 +13,7 @@ COPY packages packages
 COPY tsconfig.base.json ./
 # Remote URLs get baked in at build time via env vars. To rotate without a
 # rebuild, flip to dynamic remotes and have the host fetch a manifest at
-# runtime (see MENTOR_NOTES.md).
+# runtime.
 ARG CATALOG_URL
 ARG ACCOUNT_URL
 ENV CATALOG_URL=$CATALOG_URL ACCOUNT_URL=$ACCOUNT_URL

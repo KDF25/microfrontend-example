@@ -3,7 +3,7 @@ import { NavLink } from "react-router-dom";
 // Known limitation: the top-nav has a hardcoded list of links. The host has
 // to know a priori that `/catalog` and `/account` are the entry routes of the
 // catalog and account remotes. A more advanced setup reads this from a
-// remote manifest (see MENTOR_NOTES.md) — but simple is usually better.
+// remote manifest — but simple is usually better.
 const ITEMS = [
   { to: "/", label: "Home", end: true },
   { to: "/catalog", label: "Catalog" },

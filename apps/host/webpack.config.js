@@ -12,7 +12,7 @@ const pkg = require("./package.json");
  * Remote URLs are read from env vars at build time so the same image can run
  * in dev (localhost:3001/3002) or in prod (CloudFront domains). In a more
  * advanced setup we'd flip to dynamic remotes (read URLs from a runtime
- * manifest) — see MENTOR_NOTES.md.
+ * manifest).
  */
 module.exports = (env, argv) => {
   const isProd = argv.mode === "production";

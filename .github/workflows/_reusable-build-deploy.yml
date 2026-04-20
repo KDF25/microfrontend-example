@@ -1,0 +1,128 @@
+name: _reusable-build-deploy
+
+# One workflow per app calls this. Keeping it reusable avoids drift between
+# the four deploy pipelines (host, catalog, account, monolith) — if you change
+# how we build or sync, change it once here.
+on:
+  workflow_call:
+    inputs:
+      app:
+        description: "Workspace app name (monolith|host|catalog|account)"
+        required: true
+        type: string
+      environment:
+        description: "dev or prod"
+        required: true
+        type: string
+      aws_region:
+        required: false
+        type: string
+        default: "us-east-1"
+      bucket:
+        required: true
+        type: string
+      distribution_id:
+        required: true
+        type: string
+      public_path:
+        required: false
+        type: string
+        default: ""
+        description: "Absolute URL prefix the remote's assets are served from (prod). Leave blank for host/monolith."
+      catalog_url:
+        required: false
+        type: string
+        default: ""
+      account_url:
+        required: false
+        type: string
+        default: ""
+    secrets:
+      AWS_ROLE_ARN:
+        required: true
+
+# Serialize deploys for the same (app, env) pair; parallel across apps is fine.
+concurrency:
+  group: ${{ inputs.app }}-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    name: lint + test + typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.7.0 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter ${{ inputs.app }} lint
+      - run: pnpm --filter ${{ inputs.app }} typecheck
+      - run: pnpm --filter ${{ inputs.app }} test
+
+  build-and-deploy:
+    name: build + sync to S3
+    needs: ci
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.7.0 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build ${{ inputs.app }}
+        env:
+          # Host uses these to bake remote URLs into its bundle at build time.
+          CATALOG_URL: ${{ inputs.catalog_url }}
+          ACCOUNT_URL: ${{ inputs.account_url }}
+          # Remotes use this to set webpack's publicPath so their chunk URLs
+          # are absolute — the host on a different origin can still load them.
+          PUBLIC_PATH: ${{ inputs.public_path }}
+          APP_VERSION: ${{ github.sha }}
+        run: pnpm --filter ${{ inputs.app }} build
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ inputs.aws_region }}
+
+      # Two-phase sync:
+      #   1) Upload hashed chunks with 1yr immutable caching.
+      #   2) Upload index.html + remoteEntry.js with no-cache so the browser
+      #      always asks the origin. The order matters: if index.html lands
+      #      before the chunks it references, users mid-load get 404s.
+      - name: Sync immutable assets
+        run: |
+          aws s3 sync apps/${{ inputs.app }}/dist s3://${{ inputs.bucket }}/ \
+            --delete \
+            --exclude "index.html" \
+            --exclude "remoteEntry.js" \
+            --cache-control "public, max-age=31536000, immutable"
+
+      - name: Sync mutable entry files
+        run: |
+          aws s3 sync apps/${{ inputs.app }}/dist s3://${{ inputs.bucket }}/ \
+            --exclude "*" \
+            --include "index.html" \
+            --include "remoteEntry.js" \
+            --cache-control "no-cache"
+
+      # Only invalidate the mutable paths. Hashed chunk URLs are new on every
+      # deploy, so they're already "invalidated" by virtue of being different
+      # objects.
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ inputs.distribution_id }} \
+            --paths "/index.html" "/remoteEntry.js" "/"

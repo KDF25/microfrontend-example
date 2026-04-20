@@ -1,0 +1,9 @@
+region                   = "us-east-1"
+github_org               = "your-github-username"
+github_repo              = "mf-infra"
+# You need to create the OIDC provider once per AWS account:
+#   aws iam create-open-id-connect-provider \
+#     --url https://token.actions.githubusercontent.com \
+#     --client-id-list sts.amazonaws.com \
+#     --thumbprint-list 6938fd4d98bab03faadb97b34396831e3780aea1
+github_oidc_provider_arn = "arn:aws:iam::000000000000:oidc-provider/token.actions.githubusercontent.com"

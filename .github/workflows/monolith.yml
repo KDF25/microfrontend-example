@@ -1,0 +1,64 @@
+name: monolith
+
+# Baseline workflow: demonstrates the "before" state. Students compare it
+# with host/catalog/account to see what coordination costs look like when
+# one pipeline owns the whole frontend.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/monolith/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/monolith.yml"
+      - ".github/workflows/_reusable-build-deploy.yml"
+  pull_request:
+    paths:
+      - "apps/monolith/**"
+      - ".github/workflows/monolith.yml"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        type: choice
+        options: [dev, prod]
+        default: dev
+
+jobs:
+  dev:
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.environment == 'dev')
+    uses: ./.github/workflows/_reusable-build-deploy.yml
+    with:
+      app: monolith
+      environment: dev
+      bucket: ${{ vars.MONOLITH_BUCKET_DEV }}
+      distribution_id: ${{ vars.MONOLITH_DIST_DEV }}
+    secrets:
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN_DEV }}
+
+  pr-check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.7.0 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter monolith lint
+      - run: pnpm --filter monolith typecheck
+      - run: pnpm --filter monolith test
+      - run: pnpm --filter monolith build
+
+  prod:
+    if: github.event_name == 'workflow_dispatch' && inputs.environment == 'prod'
+    uses: ./.github/workflows/_reusable-build-deploy.yml
+    with:
+      app: monolith
+      environment: prod
+      bucket: ${{ vars.MONOLITH_BUCKET_PROD }}
+      distribution_id: ${{ vars.MONOLITH_DIST_PROD }}
+    secrets:
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN_PROD }}

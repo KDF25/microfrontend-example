@@ -1,0 +1,75 @@
+name: host
+
+# The host bakes remote URLs (CATALOG_URL, ACCOUNT_URL) into its bundle.
+# If you rotate a remote's domain, you must redeploy the host too — this is
+# the price of static remote URLs. MENTOR_NOTES.md covers the dynamic-remote
+# upgrade path.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/host/**"
+      - "packages/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/host.yml"
+      - ".github/workflows/_reusable-build-deploy.yml"
+  pull_request:
+    paths:
+      - "apps/host/**"
+      - "packages/**"
+      - ".github/workflows/host.yml"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        type: choice
+        options: [dev, prod]
+        default: dev
+
+jobs:
+  dev:
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.environment == 'dev')
+    uses: ./.github/workflows/_reusable-build-deploy.yml
+    with:
+      app: host
+      environment: dev
+      bucket: ${{ vars.HOST_BUCKET_DEV }}
+      distribution_id: ${{ vars.HOST_DIST_DEV }}
+      catalog_url: ${{ vars.CATALOG_URL_DEV }}
+      account_url: ${{ vars.ACCOUNT_URL_DEV }}
+    secrets:
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN_DEV }}
+
+  # PRs just run CI — no deploy.
+  pr-check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.7.0 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter host lint
+      - run: pnpm --filter host typecheck
+      - run: pnpm --filter host test
+      - run: pnpm --filter host build
+        env:
+          CATALOG_URL: https://example.invalid
+          ACCOUNT_URL: https://example.invalid
+
+  prod:
+    if: github.event_name == 'workflow_dispatch' && inputs.environment == 'prod'
+    uses: ./.github/workflows/_reusable-build-deploy.yml
+    with:
+      app: host
+      environment: prod
+      bucket: ${{ vars.HOST_BUCKET_PROD }}
+      distribution_id: ${{ vars.HOST_DIST_PROD }}
+      catalog_url: ${{ vars.CATALOG_URL_PROD }}
+      account_url: ${{ vars.ACCOUNT_URL_PROD }}
+    secrets:
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN_PROD }}

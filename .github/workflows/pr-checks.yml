@@ -1,0 +1,27 @@
+name: pr-checks
+
+# Light workspace-wide gate so that changes touching shared packages are
+# validated across ALL apps (microfrontends must not silently break the host).
+on:
+  pull_request:
+    paths:
+      - "packages/**"
+      - "pnpm-workspace.yaml"
+      - "tsconfig.base.json"
+      - ".eslintrc.cjs"
+
+jobs:
+  workspace-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.7.0 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r lint
+      - run: pnpm -r typecheck
+      - run: pnpm -r test

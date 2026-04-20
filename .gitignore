@@ -1,0 +1,20 @@
+node_modules
+dist
+build
+coverage
+.DS_Store
+*.log
+.env
+.env.local
+.env*.local
+!.env.example
+.pnpm-store
+.idea
+.vscode
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars
+!example.tfvars
+.terraform.lock.hcl

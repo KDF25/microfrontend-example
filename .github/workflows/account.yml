@@ -1,0 +1,65 @@
+name: account
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/account/**"
+      - "packages/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/account.yml"
+      - ".github/workflows/_reusable-build-deploy.yml"
+  pull_request:
+    paths:
+      - "apps/account/**"
+      - "packages/**"
+      - ".github/workflows/account.yml"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        type: choice
+        options: [dev, prod]
+        default: dev
+
+jobs:
+  dev:
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.environment == 'dev')
+    uses: ./.github/workflows/_reusable-build-deploy.yml
+    with:
+      app: account
+      environment: dev
+      bucket: ${{ vars.ACCOUNT_BUCKET_DEV }}
+      distribution_id: ${{ vars.ACCOUNT_DIST_DEV }}
+      public_path: ${{ vars.ACCOUNT_URL_DEV }}/
+    secrets:
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN_DEV }}
+
+  pr-check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.7.0 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter account lint
+      - run: pnpm --filter account typecheck
+      - run: pnpm --filter account test
+      - run: pnpm --filter account build
+
+  prod:
+    if: github.event_name == 'workflow_dispatch' && inputs.environment == 'prod'
+    uses: ./.github/workflows/_reusable-build-deploy.yml
+    with:
+      app: account
+      environment: prod
+      bucket: ${{ vars.ACCOUNT_BUCKET_PROD }}
+      distribution_id: ${{ vars.ACCOUNT_DIST_PROD }}
+      public_path: ${{ vars.ACCOUNT_URL_PROD }}/
+    secrets:
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN_PROD }}

@@ -1,0 +1,10 @@
+region                   = "us-east-1"
+github_org               = "your-org"
+github_repo              = "mf-infra"
+github_oidc_provider_arn = "arn:aws:iam::000000000000:oidc-provider/token.actions.githubusercontent.com"
+
+# Provide all three aliases in prod + a matching ACM cert in us-east-1.
+host_aliases    = ["app.example.com"]
+catalog_aliases = ["catalog-cdn.example.com"]
+account_aliases = ["account-cdn.example.com"]
+acm_certificate_arn = "arn:aws:acm:us-east-1:000000000000:certificate/xxxxxxxx-xxxx"

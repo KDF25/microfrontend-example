@@ -13,17 +13,17 @@ interface Props {
 // outage, version skew, broken deploy) — when that happens the host must
 // stay alive. This boundary shows a local fallback and logs the error.
 class RemoteErrorBoundary extends Component<Props, State> {
-  state: State = { error: null };
+  override state: State = { error: null };
 
   static getDerivedStateFromError(error: Error): State {
     return { error };
   }
 
-  componentDidCatch(error: Error) {
+  override componentDidCatch(error: Error) {
     console.error(`[host] remote "${this.props.name}" failed to load:`, error);
   }
 
-  render() {
+  override render() {
     if (this.state.error) {
       return (
         <div className="empty-state">

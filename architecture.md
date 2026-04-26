@@ -222,6 +222,31 @@ in prod we scope to the host's domain only.
 
 ---
 
+## Rollback strategy
+
+If a bad deploy ships to production, we can rollback safely without rebuilding the code:
+
+- **Git SHA Redeploy:** Since the CI pipeline builds deterministically, we can trigger the `prod` workflow manually (`workflow_dispatch`) and specify a previous, known-good commit SHA. The pipeline will rebuild the assets and `aws s3 sync --delete` will replace the `index.html` and `remoteEntry.js` with the previous versions.
+- **Why `--delete` is safe here:** The two-phase sync in our reusable workflow uploads all hashed JS chunks *first*, before swapping the entry files (`index.html` / `remoteEntry.js`). This means a rollback immediately restores the old entry files, which correctly point to the old (re-uploaded) chunks.
+
+---
+
+## Service discovery (Dynamic Remotes)
+
+Currently, the host reads remote URLs from environment variables (`CATALOG_URL`, `ACCOUNT_URL`) at build time. If we need to migrate the catalog to a new domain, we are forced to rebuild and redeploy the host.
+
+**Target architecture:** Dynamic remotes.
+
+1. A JSON manifest (`RemoteManifest`) is hosted independently (e.g., in a central S3 bucket or SSM Parameter Store).
+2. The host fetches this manifest on initialization before mounting React.
+3. Webpack's `ModuleFederationPlugin` can be configured to load remotes dynamically by resolving their URLs at runtime using the manifest data, eliminating the need for a host rebuild when a remote changes its infrastructure location.
+
+---
+
 ## What I'd do differently in a real 50-dev org
 
-*(Students fill this in as the last paragraph of their solution.)*
+In a scale-up scenario with 50+ developers, the current setup would face bottlenecks that require stricter contracts and better tooling:
+
+1. **Contract Testing & Type Safety:** Sharing a `packages/types` folder across repositories is brittle. I would introduce explicit contract testing (e.g., Pact) between the host and remotes to ensure `HostServices` changes are backwards compatible. The types package would be published to an internal registry with semantic versioning.
+2. **Shared UI Library via npm:** Lifting components into `@mf/ui` and expecting Module Federation to stitch them together at runtime is risky for design systems. I would package the design system as a standard npm module, version it, and let each team bundle their specific version (or configure it as a peer dependency with strict version negotiation).
+3. **Dynamic Remotes & Canary Deploys:** I would fully implement the dynamic remote manifest discussed above and hook it up to LaunchDarkly or an API gateway. This allows traffic-shifting (e.g., routing 10% of users to `catalog-v2.js`), which is essential for safe deployments in a large organization.
